@@ -18,7 +18,12 @@ jobs:
           paths:
             - ~/.m2
           key: v1-dependencies-{{ checksum "project.clj" }}
+      - run:
+          name: gcp_credentials
+          command: |
+            echo $GCP_CREDENTIALS | base64 --decode > gcp_credentials.json
+            echo 'export GOOGLE_APPLICATION_CREDENTIALS="$HOME/gcp_credentials.json"' >> $BASH_ENV
       - run: lein do test, uberjar
       - store_artifacts:
-          path: target/uberjar/cci-demo-clojure.jar
+          path: target/gcs-database-history-0.1.0-SNAPSHOT.jar
           destination: uberjar
