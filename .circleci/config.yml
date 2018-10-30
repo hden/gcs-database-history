@@ -23,6 +23,7 @@ jobs:
           command: |
             echo $GCP_CREDENTIALS | base64 --decode > gcp_credentials.json
             echo 'export GOOGLE_APPLICATION_CREDENTIALS="$HOME/gcp_credentials.json"' >> $BASH_ENV
+            source $BASH_ENV
       - run: lein do test, uberjar
       - store_artifacts:
           path: target/gcs-database-history-0.1.0-SNAPSHOT.jar
