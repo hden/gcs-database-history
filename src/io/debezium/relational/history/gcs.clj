@@ -52,7 +52,8 @@
 
 (defn read-blob [blob]
   (let [options (create-blob-source-options)]
-    (slurp (get-content blob options))))
+    (println (satisfies? AbstractBlob blob)) ;; true
+    (slurp (get-content blob options)))) ;; java.lang.ClassCastException: io.debezium.relational.history.gcs_test.Blob cannot be cast to io.debezium.relational.history.gcs.AbstractBlob
 
 (defn read-records [storage bucket prefix]
   (let [blobs (list-bucket storage bucket prefix)

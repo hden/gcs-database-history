@@ -31,10 +31,8 @@
       (create-page contents))
     (writer [this info options]
       (reify WriteChannel
-        (isOpen [this]
-          (println "isOpen"))
-        (close [this]
-          (println "close"))
+        (isOpen [this])
+        (close [this])
         (write [this buffer]
           1)))))
 
