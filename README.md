@@ -1,4 +1,4 @@
-# gcs-database-history [![CircleCI](https://circleci.com/gh/hden/gcs-database-history/tree/master.svg?style=svg)](https://circleci.com/gh/hden/gcs-database-history/tree/master)
+# gcs-database-history [![CircleCI](https://circleci.com/gh/hden/gcs-database-history/tree/master.svg?style=svg)](https://circleci.com/gh/hden/gcs-database-history/tree/master) [![codecov](https://codecov.io/gh/hden/gcs-database-history/branch/master/graph/badge.svg)](https://codecov.io/gh/hden/gcs-database-history)
 
 A [debezium](https://github.com/debezium/debezium) DatabaseHistory implementation that stores the schema history in a GCS bucket.
 
