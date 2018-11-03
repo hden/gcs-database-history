@@ -2,12 +2,45 @@
   (:require [clojure.test :refer :all]
             [clojure.string :as string]
             [io.debezium.relational.history.gcs :as gcs])
-  (:import [io.debezium.config Configuration]
+  (:import [com.google.api.gax.paging Page]
+           [com.google.cloud WriteChannel]
+           [com.google.cloud.storage Storage]
+           [io.debezium.config Configuration]
            [io.debezium.relational.history HistoryRecordComparator]))
 
-(def ^:const bucket "gcs-database-history")
-(def ^:const prefix "relational/history-")
-(def ^:const fixture "relational/history-cjnu3yxr000003h5r04qlqq9s.json")
+(def ^:const bucket "bucket")
+(def ^:const prefix "prefix")
+
+(def history (.getBytes "{}"))
+
+(definterface IBlob
+  (getContent [options]))
+
+(defrecord Blob [content]
+  IBlob
+  (getContent [this options]
+    content))
+
+(defn create-blob [content]
+  (new Blob content))
+
+(defn create-page [contents]
+  (reify Page
+    (iterateAll [this]
+      (map create-blob contents))))
+
+(defn create-storage [{:keys [contents]}]
+  (reify Storage
+    (list [this bucket options]
+      (create-page contents))
+    (writer [this info options]
+      (reify WriteChannel
+        (isOpen [this]
+          (println "isOpen"))
+        (close [this]
+          (println "close"))
+        (write [this buffer]
+          1)))))
 
 (deftest helpers
   (testing "create-blob-id"
@@ -22,32 +55,34 @@
       (is (= (.getContentType info) "application/json"))))
 
   (testing "list-bucket"
-    (let [buckets (gcs/list-bucket bucket prefix)]
+    (let [storage (create-storage {:contents [history]})
+          buckets (gcs/list-bucket storage bucket prefix)]
       (is (not (empty? buckets)))))
 
   (testing "create-history-record"
     (is (gcs/create-history-record "{}")))
 
   (testing "read-blob"
-    (let [id (gcs/create-blob-id bucket fixture)
-          blob (.get gcs/storage id)
+    (let [blob (create-blob history)
           content (gcs/read-blob blob)]
       (is (not (empty? content)))))
 
   (testing "read-records"
-    (is (not (empty? (gcs/read-records bucket prefix)))))
+    (let [storage (create-storage {:contents [history]})]
+      (is (not (empty? (gcs/read-records storage bucket prefix))))))
 
   (testing "write-record!"
-    (let [record (gcs/create-history-record "{}")
-          path (gcs/write-record! bucket prefix record)
-          id (gcs/create-blob-id bucket path)]
-      (is (string/includes? path prefix))
-      (.delete gcs/storage id))))
+    (let [storage (create-storage {:contents [history]})
+          record (gcs/create-history-record "{}")
+          path (gcs/write-record! storage bucket prefix record)]
+      (is (string/includes? path prefix)))))
 
 (defn create-history [coll]
   (let [instance (new io.debezium.relational.history.gcs.GCSDatabaseHistory)
+        storage (create-storage {:contents [history]})
         config (Configuration/from coll)]
     (.configure instance config HistoryRecordComparator/INSTANCE)
+    (swap! (.state instance) assoc :storage storage)
     instance))
 
 (defn create-consumer [state]

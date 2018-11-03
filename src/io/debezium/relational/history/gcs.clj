@@ -2,7 +2,7 @@
   (:require [clojure.string :as string]
             [cuid.core :refer [cuid]])
   (:import [java.nio.charset StandardCharsets]
-           [com.google.cloud.storage BlobId BlobInfo StorageOptions Storage$BlobListOption Blob$BlobSourceOption Storage$BlobWriteOption]
+           [com.google.cloud.storage BlobId BlobInfo StorageOptions Storage$BlobListOption Storage$BlobWriteOption Blob$BlobSourceOption]
            [io.debezium.document DocumentReader DocumentWriter]
            [io.debezium.relational.history HistoryRecord])
   (:gen-class
@@ -12,7 +12,6 @@
     :state state))
 
 (def charset StandardCharsets/UTF_8)
-(def storage (.getService (StorageOptions/getDefaultInstance)))
 (def reader (DocumentReader/defaultReader))
 (def writer (DocumentWriter/defaultWriter))
 
@@ -38,7 +37,7 @@
 (defn create-history-record [x]
   (new HistoryRecord (.read reader x)))
 
-(defn list-bucket [bucket prefix]
+(defn list-bucket [storage bucket prefix]
   (let [options (create-bucket-list-options prefix)
         page (.list storage bucket options)
         iterator (.iterator (.iterateAll page))]
@@ -48,13 +47,13 @@
   (let [options (create-blob-source-options)]
     (slurp (.getContent blob options))))
 
-(defn read-records [bucket prefix]
-  (let [blobs (list-bucket bucket prefix)
+(defn read-records [storage bucket prefix]
+  (let [blobs (list-bucket storage bucket prefix)
         tx (comp (map read-blob)
                  (map #(create-history-record %)))]
     (into [] tx blobs)))
 
-(defn write-record! [bucket prefix record]
+(defn write-record! [storage bucket prefix record]
   (let [path (format "%s%s.json" prefix (cuid))
         info (create-blob-info bucket path)
         options (create-blob-write-options)
@@ -70,19 +69,20 @@
 (defn -configure [this config _]
   (let [state (.state this)
         bucket (.getString config "database.history.gcs.bucket")
-        prefix (.getString config "database.history.gcs.prefix")]
-    (swap! state merge {:bucket bucket :prefix prefix})))
+        prefix (.getString config "database.history.gcs.prefix")
+        storage (.getService (StorageOptions/getDefaultInstance))]
+    (swap! state merge {:bucket bucket :prefix prefix :storage storage})))
 
 (defn -exists [this]
-  (let [{:keys [bucket prefix]} @(.state this)]
-    (not (empty? (list-bucket bucket prefix)))))
+  (let [{:keys [bucket prefix storage]} @(.state this)]
+    (not (empty? (list-bucket storage bucket prefix)))))
 
 (defn -storeRecord [this record]
   (when record
-    (let [{:keys [bucket prefix]} @(.state this)]
-      (write-record! bucket prefix record))))
+    (let [{:keys [bucket prefix storage]} @(.state this)]
+      (write-record! storage bucket prefix record))))
 
 (defn -recoverRecords [this consumer]
-  (let [{:keys [bucket prefix]} @(.state this)]
-    (doseq [record (read-records bucket prefix)]
+  (let [{:keys [bucket prefix storage]} @(.state this)]
+    (doseq [record (read-records storage bucket prefix)]
       (.accept consumer record))))
