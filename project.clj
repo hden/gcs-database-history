@@ -9,6 +9,7 @@
                  [cuid "0.1.1"]]
   :aot [io.debezium.relational.history.gcs]
   :test-paths ["test"]
+  :plugins [[lein-cloverage "1.0.13"]]
   :profiles
   {:test
    {:dependencies [[org.slf4j/slf4j-nop "1.8.0-beta2"]]}})
