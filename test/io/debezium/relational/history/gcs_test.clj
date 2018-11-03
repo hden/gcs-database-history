@@ -10,15 +10,11 @@
 
 (def ^:const bucket "bucket")
 (def ^:const prefix "prefix")
-
 (def history (.getBytes "{}"))
 
-(definterface IBlob
-  (getContent [options]))
-
 (defrecord Blob [content]
-  IBlob
-  (getContent [this options]
+  gcs/AbstractBlob
+  (get-content [_ options]
     content))
 
 (defn create-blob [content]
@@ -63,9 +59,8 @@
     (is (gcs/create-history-record "{}")))
 
   (testing "read-blob"
-    (let [blob (create-blob history)
-          content (gcs/read-blob blob)]
-      (is (not (empty? content)))))
+    (let [blob (create-blob history)]
+      (is (= "{}" (gcs/read-blob blob)))))
 
   (testing "read-records"
     (let [storage (create-storage {:contents [history]})]

@@ -2,7 +2,7 @@
   (:require [clojure.string :as string]
             [cuid.core :refer [cuid]])
   (:import [java.nio.charset StandardCharsets]
-           [com.google.cloud.storage BlobId BlobInfo StorageOptions Storage$BlobListOption Storage$BlobWriteOption Blob$BlobSourceOption]
+           [com.google.cloud.storage Blob BlobId BlobInfo StorageOptions Storage$BlobListOption Storage$BlobWriteOption Blob$BlobSourceOption]
            [io.debezium.document DocumentReader DocumentWriter]
            [io.debezium.relational.history HistoryRecord])
   (:gen-class
@@ -14,6 +14,13 @@
 (def charset StandardCharsets/UTF_8)
 (def reader (DocumentReader/defaultReader))
 (def writer (DocumentWriter/defaultWriter))
+
+(defprotocol AbstractBlob
+  (get-content [this options]))
+
+(extend Blob
+  AbstractBlob
+  {:get-content (fn [this options] (.getContent this options))})
 
 (defn create-blob-id [bucket path]
   (BlobId/of bucket path))
@@ -45,7 +52,7 @@
 
 (defn read-blob [blob]
   (let [options (create-blob-source-options)]
-    (slurp (.getContent blob options))))
+    (slurp (get-content blob options))))
 
 (defn read-records [storage bucket prefix]
   (let [blobs (list-bucket storage bucket prefix)
