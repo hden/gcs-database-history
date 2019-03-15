@@ -1,4 +1,4 @@
-(defproject gcs-database-history "0.2.0"
+(defproject gcs-database-history "0.2.1"
   :description "A [debezium](https://github.com/debezium/debezium) DatabaseHistory implementation that stores the schema history in a GCS bucket."
   :url "https://github.com/hden/gcs-database-history"
   :license {:name "Eclipse Public License"
